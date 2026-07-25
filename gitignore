@@ -1,0 +1,6 @@
+data/*.jsonl
+checkpoints/*.pt
+tokenizer/*.json
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
