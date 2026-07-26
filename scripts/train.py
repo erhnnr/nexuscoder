@@ -27,7 +27,7 @@ from models.model_v1 import KodLLM_v1
 # ============================================
 # AYARLAR - Colab'daki yol yapinize gore duzenleyin
 # ============================================
-PROJECT_DIR = "/content/kod-llm"
+PROJECT_DIR = "/content/nexuscoder"
 DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/kod-llm-checkpoints"  # Drive'a kaydeder
 TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v1.json"
 TRAIN_PATH = f"{PROJECT_DIR}/data/train.jsonl"
