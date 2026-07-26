@@ -1,13 +1,6 @@
+%%writefile /content/nexuscoder/scripts/fetch_dataset.py
 """
-Kod-LLM v2 - Veri cekme scripti.
-
-OGRETICI NOT: Burada "bigcode/the-stack-smol" veri setini kullaniyoruz.
-Bu veri seti GitHub'dan toplanmis, dile gore ayrilmis, acik lisansli kod
-dosyalarindan olusuyor. Biz sadece Python, JavaScript ve C kismini cekiyoruz
-- kapsam daraltmasi = ayni hesaplama butcesiyle daha iyi sonuc (once konustugumuz
-"genel LLM degil, kod LLM" prensibi).
-
-Cikti format, mevcut prepare_data.py ile birebir uyumlu: data/raw_*.jsonl
+Kod-LLM v2 - Veri cekme scripti (bigcode/the-stack-smol, HF token ile).
 """
 import json
 import os
@@ -15,15 +8,14 @@ from datasets import load_dataset
 
 OUT_DIR = "data"
 LANGUAGES = ["python", "javascript", "c"]
-SAMPLES_PER_LANGUAGE = 8000  # dil basina cekilecek dosya sayisi (ayarlanabilir)
-MIN_CHARS = 50               # cok kisa/anlamsiz dosyalari ele
-MAX_CHARS = 8000             # cok uzun dosyalari kirp (max_seq_len ile uyumlu kalsin)
+SAMPLES_PER_LANGUAGE = 8000
+MIN_CHARS = 50
+MAX_CHARS = 8000
 
 
 def clean_and_save(lang, samples_target):
     print(f"\n--- {lang} indiriliyor (hedef: {samples_target} ornek) ---")
 
-    # streaming=True: tum veri setini diske indirmeden, ihtiyac kadar akar
     ds = load_dataset(
         "bigcode/the-stack-smol",
         data_dir=f"data/{lang}",
@@ -66,8 +58,6 @@ def main():
     print(f"\n{'='*50}")
     print(f"TOPLAM YENI ORNEK: {total}")
     print(f"{'='*50}")
-    print("\nNot: Eski verileriniz (raw_1.jsonl, raw_2.jsonl) data/ klasorunde")
-    print("hala duruyor - prepare_data.py hepsini otomatik birlestirecek.")
 
 
 if __name__ == "__main__":
