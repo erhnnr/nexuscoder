@@ -1,4 +1,3 @@
-%%writefile /content/nexuscoder/scripts/fetch_dataset.py
 """
 Kod-LLM v2 - Veri cekme scripti (bigcode/the-stack-smol, HF token ile).
 """
