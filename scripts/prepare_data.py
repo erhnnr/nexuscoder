@@ -1,8 +1,13 @@
 """
-Kod-LLM v1 - Veri hazirlama.
+Kod-LLM v3 - Veri hazirlama.
 data/*.jsonl dosyalarini birlestirir, karistirir, train/val olarak boler.
-Onceki scriptte validation seti YOKTU - bu yuzden gercek genelleme
-hicbir zaman olculemiyordu. v1'de bu duzeltiliyor.
+
+ADR-0006: Sadece raw_stack_*.jsonl (temiz, Ingilizce, GitHub kaynakli
+Python/JS/C) dosyalari kullaniliyor. Eski raw_1/raw_2.jsonl (karisik
+Turkce/Ingilizce icerikli) veriler bilinerek disarida birakildi -
+karisik dil, tokenizer vocab budcesini bolup Ingilizce kod
+kelimelerinin (factorial, calculate gibi) tam ogrenilmesini
+zorlastiriyordu.
 """
 import json
 import glob
@@ -17,7 +22,7 @@ def main():
     random.seed(SEED)
     all_samples = []
 
-    for path in glob.glob(f"{DATA_DIR}/raw_*.jsonl"):
+    for path in glob.glob(f"{DATA_DIR}/raw_stack_*.jsonl"):
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 try:
