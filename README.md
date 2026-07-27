@@ -1,48 +1,20 @@
-# Kod-LLM
+# Architecture Decision Records (ADR)
 
-Python, HTML/CSS/JS ve C odaklı, sıfırdan eğitilen küçük bir kod dil modeli.
-Sistematik olarak `model_v1 -> model_v2 -> ...` şeklinde büyütülüyor.
+Bu klasor, NexusCoder projesinde alinan onemli teknik kararlari kaydeder.
+Her ADR: neden o karar alindi, hangi alternatifler dusunuldu, sonucu ne oldu.
 
-## Versiyonlama mantığı
+Amac: "neden boyle yaptik?" sorusunun cevabinin hafizada degil, yazida
+durmasi. Ilerledikce yeni kararlar icin yeni numarali dosyalar eklenir
+(0006, 0007, ...). Eski bir karar degisirse, eski ADR SILINMEZ, "Durum"
+alani "degistirildi -> 000X" olarak guncellenir ve yeni bir ADR eklenir.
 
-Her versiyon şunlardan en az birini değiştirir: mimari, veri miktarı, model boyutu.
-Bir önceki versiyonun checkpoint'i, veri arttığında yeni versiyona **devam** eğitimi
-için taşınabilir (weight'ler uyumluysa).
+## Indeks
 
-| Versiyon | Amaç | Veri | Parametre | Durum |
-|----------|------|------|-----------|-------|
-| v1 | Pipeline'ın doğru çalıştığını kanıtlamak (causal mask, eval loss, checkpoint) | ~2-5k örnek | ~15-25M | 🚧 şu an burada |
-| v2 | Veri setini büyütmek (açık kaynak Python/JS/C veri seti) | ~50-200k örnek | ~40-60M | henüz değil |
-| v3 | Kapasiteyi büyütmek, gerekirse RoPE/KV-cache ekleyip inference'ı hızlandırmak | v2 ile aynı/daha fazla | ~100M+ | henüz değil |
-
-## v1'de düzeltilen buglar (önceki koddan)
-
-1. **Causal mask eksikliği**: `nn.MultiheadAttention` hiçbir mask almıyordu,
-   model geleceği görebiliyordu → loss yapay olarak çok hızlı düşüyordu (ezber).
-   v1'de `attn_mask` olarak üst üçgen mask veriliyor.
-2. **Model/veri oranı**: 560M parametre, 1374 örnekle eşleşmiyordu (aşırı ezber).
-   v1'de model küçültüldü (~20M), veri seti verimli kullanılacak şekilde ayarlandı.
-3. **Validation seti yoktu**: Artık train/val ayrımı var, gerçek genelleme takip
-   edilebiliyor.
-4. **Checkpoint Drive'a değil, Colab'ın geçici diskine kaydediliyordu**: Colab
-   oturumu kopunca kaybolabilir. v1'de Drive'a kaydetme talimatı var.
-
-## Klasör yapısı
-
-```
-kod-llm/
-  models/
-    model_v1.py       <- mimari tanımı (bu versiyona özel)
-  scripts/
-    prepare_data.py   <- veri temizleme / train-val split
-    train_tokenizer.py
-    train.py           <- ana eğitim scripti
-  data/                <- (git'e eklenmez, .gitignore'da) ham/işlenmiş veri
-  tokenizer/           <- eğitilmiş tokenizer dosyası
-  checkpoints/          <- (git'e eklenmez) model ağırlıkları
-```
-
-## Sıradaki adım
-
-Bu README'nin altına her versiyon tamamlandığında bir "sonuçlar" bölümü
-eklenecek: val loss grafiği, örnek üretimler, ne öğrendik.
+| No | Baslik | Durum |
+|----|--------|-------|
+| [0001](0001-causal-mask-zorunlulugu.md) | Causal attention mask zorunlulugu | Kabul edildi |
+| [0002](0002-v1-ogrenilen-pozisyon-embedding.md) | v1'de RoPE yerine ogrenilen pozisyon embedding | Kabul edildi |
+| [0003](0003-model-boyutu-veri-oranı.md) | Model boyutunun veri miktarina gore kucultulmesi | Kabul edildi |
+| [0004](0004-veri-kaynagi-secimi.md) | Veri kaynagi: bigcode/the-stack-smol | Kabul edildi |
+| [0005](0005-dil-kapsami-daraltma.md) | Dil kapsaminin Python/JS/C ile sinirlandirilmasi | Kabul edildi |
+| [0006](0006-dil-karisikligi-duzeltmesi.md) | Egitim verisinin sadece Ingilizce/kod kaynaklarina daraltilmasi | Kabul edildi |
