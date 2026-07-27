@@ -27,9 +27,9 @@ from models.model_v1 import KodLLM_v1
 # ============================================
 # AYARLAR - Colab'daki yol yapinize gore duzenleyin
 # ============================================
-PROJECT_DIR = "/content/nexuscoder"
-DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/kod-llm-checkpoints"  # Drive'a kaydeder
-TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v1.json"
+PROJECT_DIR = "/content/kod-llm"
+DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/nexus_checkpoints"  # Drive'a kaydeder
+TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v3.json"
 TRAIN_PATH = f"{PROJECT_DIR}/data/train.jsonl"
 VAL_PATH = f"{PROJECT_DIR}/data/val.jsonl"
 
@@ -209,7 +209,7 @@ def main():
                 "val_loss": val_loss,
                 "model_config": MODEL_CONFIG,
                 "vocab_size": vocab_size,
-            }, f"{DRIVE_CHECKPOINT_DIR}/model_v1_best.pt")
+            }, f"{DRIVE_CHECKPOINT_DIR}/model_v3_best.pt")
             print(f"  Yeni en iyi model Drive'a kaydedildi (val_loss={val_loss:.4f})\n")
 
         if (epoch + 1) % CHECKPOINT_EVERY_N_EPOCHS == 0:
@@ -220,7 +220,7 @@ def main():
                 "val_loss": val_loss,
                 "model_config": MODEL_CONFIG,
                 "vocab_size": vocab_size,
-            }, f"{DRIVE_CHECKPOINT_DIR}/model_v1_epoch_{epoch+1}.pt")
+            }, f"{DRIVE_CHECKPOINT_DIR}/model_v3_epoch_{epoch+1}.pt")
 
         scheduler.step()
 
