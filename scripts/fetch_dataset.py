@@ -1,5 +1,5 @@
 """
-Kod-LLM v4 - Veri cekme scripti (bigcode/the-stack-smol, HF token ile).
+Kod-LLM v4 - Veri cekme scripti (bigcode/the-stack TAM versiyon, HF token ile).
 ADR-0011: dil basina ornek sayisi 8000 -> 30000 (v4 veri buyutme).
 """
 import json
@@ -8,7 +8,7 @@ from datasets import load_dataset
 
 OUT_DIR = "data"
 LANGUAGES = ["python", "javascript", "c"]
-SAMPLES_PER_LANGUAGE = 30000  # ADR-0011 (v4): dil basina 4x artirildi
+SAMPLES_PER_LANGUAGE = 100000  # ADR-0011 (v4-genisletilmis): tam the-stack, dil basina 100k hedef
 MIN_CHARS = 50
 MAX_CHARS = 8000
 
@@ -17,7 +17,7 @@ def clean_and_save(lang, samples_target):
     print(f"\n--- {lang} indiriliyor (hedef: {samples_target} ornek) ---")
 
     ds = load_dataset(
-        "bigcode/the-stack-smol",
+        "bigcode/the-stack",
         data_dir=f"data/{lang}",
         split="train",
         streaming=True,
