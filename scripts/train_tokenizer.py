@@ -12,7 +12,7 @@ import glob
 from tokenizers import Tokenizer, models, pre_tokenizers, trainers
 
 DATA_DIR = "data"
-OUT_PATH = "tokenizer/tokenizer_v3.json"
+OUT_PATH = "tokenizer/tokenizer_v4.json"
 VOCAB_SIZE = 16000  # ADR-0006: temiz Ingilizce kod verisi, buyutulmus vocab
 
 
