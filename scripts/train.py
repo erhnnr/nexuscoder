@@ -1,7 +1,7 @@
 """
 Kod-LLM v3 - Ana egitim scripti (Colab icin).
 
-v3 ADR-0006: tokenizer_v3.json (16k vocab, sadece Ingilizce/kod verisi),
+v4 ADR-0011 (veri+model buyutuldu), eski v3 ADR-0006: tokenizer_v4.json (16k vocab, sadece Ingilizce/kod verisi),
 checkpoint klasoru nexus_checkpoints olarak guncellendi.
 v3 ADR-0007: tokenizer, checkpoint ile AYNI Drive klasorune kopyalanir.
 v3 ADR-0008: RESUME destegi eklendi - onceki en iyi checkpoint varsa
@@ -31,15 +31,15 @@ from models.model_v1 import KodLLM_v1
 # ============================================
 PROJECT_DIR = "/content/nexuscoder"
 DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/nexus_checkpoints"
-TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v3.json"
+TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v4.json"
 TRAIN_PATH = f"{PROJECT_DIR}/data/train.jsonl"
 VAL_PATH = f"{PROJECT_DIR}/data/val.jsonl"
-RESUME_CHECKPOINT_PATH = f"{DRIVE_CHECKPOINT_DIR}/model_v3_latest.pt"  # ADR-0009: resume icin BEST degil LATEST kullanilir
+RESUME_CHECKPOINT_PATH = f"{DRIVE_CHECKPOINT_DIR}/model_v4_latest.pt"  # ADR-0009: resume icin BEST degil LATEST kullanilir
 
 MAX_SEQ_LEN = 512
 BATCH_SIZE = 8
 GRAD_ACCUM_STEPS = 4
-NUM_EPOCHS = 100              # Bu OTURUMDA kac epoch kosulacak (kisa, hizli test)
+NUM_EPOCHS = 5              # Bu OTURUMDA kac epoch kosulacak (kisa, hizli test)
 LR = 3e-4
 WEIGHT_DECAY = 0.01
 MAX_GRAD_NORM = 1.0
@@ -47,9 +47,9 @@ EVAL_EVERY_N_BATCHES = 500
 CHECKPOINT_EVERY_N_EPOCHS = 1
 
 MODEL_CONFIG = dict(
-    dim=384,
-    num_layers=6,
-    num_heads=6,
+    dim=512,
+    num_layers=8,
+    num_heads=8,
     max_seq_len=MAX_SEQ_LEN,
     dropout=0.1,
 )
@@ -134,7 +134,7 @@ def main():
     print(f"Tokenizer yuklendi. Vocab: {vocab_size}\n")
 
     # ADR-0007: tokenizer'i checkpoint klasorune de kopyala.
-    tokenizer_backup_path = f"{DRIVE_CHECKPOINT_DIR}/tokenizer_v3.json"
+    tokenizer_backup_path = f"{DRIVE_CHECKPOINT_DIR}/tokenizer_v4.json"
     shutil.copy(TOKENIZER_PATH, tokenizer_backup_path)
     print(f"Tokenizer Drive'a da yedeklendi: {tokenizer_backup_path}\n")
 
@@ -252,11 +252,11 @@ def main():
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v3_best.pt")
+            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v4_best.pt")
             print(f"  Yeni en iyi model Drive'a kaydedildi (val_loss={val_loss:.4f})\n")
 
         if (local_epoch + 1) % CHECKPOINT_EVERY_N_EPOCHS == 0:
-            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v3_epoch_{epoch}.pt")
+            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v4_epoch_{epoch}.pt")
 
         scheduler.step()
 
