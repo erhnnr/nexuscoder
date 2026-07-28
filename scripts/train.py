@@ -34,12 +34,12 @@ DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/nexus_checkpoints"
 TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v3.json"
 TRAIN_PATH = f"{PROJECT_DIR}/data/train.jsonl"
 VAL_PATH = f"{PROJECT_DIR}/data/val.jsonl"
-RESUME_CHECKPOINT_PATH = f"{DRIVE_CHECKPOINT_DIR}/model_v3_best.pt"
+RESUME_CHECKPOINT_PATH = f"{DRIVE_CHECKPOINT_DIR}/model_v3_latest.pt"  # ADR-0009: resume icin BEST degil LATEST kullanilir
 
 MAX_SEQ_LEN = 512
 BATCH_SIZE = 8
 GRAD_ACCUM_STEPS = 4
-NUM_EPOCHS = 25              # Bu OTURUMDA kac epoch kosulacak (kisa, hizli test)
+NUM_EPOCHS = 5              # Bu OTURUMDA kac epoch kosulacak (kisa, hizli test)
 LR = 3e-4
 WEIGHT_DECAY = 0.01
 MAX_GRAD_NORM = 1.0
@@ -166,10 +166,19 @@ def main():
         if ckpt.get("vocab_size") == vocab_size and ckpt.get("model_config") == MODEL_CONFIG:
             model.load_state_dict(ckpt["model_state_dict"])
             optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            # ADR-0009: onceki oturumun cosine schedule'i LR'yi ~0'a
+            # dusurmus olabilir. Optimizer'in tasidigi LR'ye guvenmek
+            # yerine, bu YENI oturum icin LR'yi bilincli olarak
+            # taban degere (LR sabiti) SIFIRLIYORUZ - yoksa yeni
+            # scheduler zaten-sifir bir degerden baslar ve o oturumda
+            # hicbir gercek ogrenme olmaz (bkz. ADR-0009).
+            for param_group in optimizer.param_groups:
+                param_group["lr"] = LR
             start_epoch = ckpt["epoch"]
             best_val_loss = ckpt["val_loss"]
             print(f"DEVAM EDILIYOR: onceki checkpoint yuklendi "
-                  f"(epoch {start_epoch}, val_loss={best_val_loss:.4f})\n")
+                  f"(epoch {start_epoch}, val_loss={best_val_loss:.4f})")
+            print(f"LR bu oturum icin {LR} degerine sifirlandi (ADR-0009)\n")
         else:
             print("Uyari: bulunan checkpoint mevcut tokenizer/model_config ile "
                   "UYUSMUYOR. SIFIRDAN baslaniyor (guvenlik onlemi).\n")
@@ -227,27 +236,27 @@ def main():
         print(f"  LR: {scheduler.get_last_lr()[0]:.6f}")
         print(f"{'='*50}\n")
 
+        checkpoint_dict = {
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "val_loss": val_loss,
+            "model_config": MODEL_CONFIG,
+            "vocab_size": vocab_size,
+        }
+
+        # ADR-0009: LATEST her epoch sonunda kaydedilir ve RESUME
+        # SADECE buradan okur - "best" ile karistirilmaz, boylece
+        # val_loss iyilesmese bile ilerleme hep kaydedilir/devam eder.
+        torch.save(checkpoint_dict, RESUME_CHECKPOINT_PATH)
+
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save({
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "val_loss": val_loss,
-                "model_config": MODEL_CONFIG,
-                "vocab_size": vocab_size,
-            }, f"{DRIVE_CHECKPOINT_DIR}/model_v3_best.pt")
+            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v3_best.pt")
             print(f"  Yeni en iyi model Drive'a kaydedildi (val_loss={val_loss:.4f})\n")
 
         if (local_epoch + 1) % CHECKPOINT_EVERY_N_EPOCHS == 0:
-            torch.save({
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "val_loss": val_loss,
-                "model_config": MODEL_CONFIG,
-                "vocab_size": vocab_size,
-            }, f"{DRIVE_CHECKPOINT_DIR}/model_v3_epoch_{epoch}.pt")
+            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v3_epoch_{epoch}.pt")
 
         scheduler.step()
 
