@@ -1,40 +1,28 @@
 """
-Kod-LLM v2 - Veri cekme scripti.
-
-OGRETICI NOT: "bigcode/the-stack-smol" GATED (korumali) cikti - HF hesabi +
-lisans onayi gerektiriyor. Onun yerine ayni mantikta calisan, ACIK
-(ungated) bir veri seti kullaniyoruz: "codeparrot/github-code-clean".
-Bu da GitHub'dan toplanmis, dile gore filtrelenebilen kod dosyalarindan
-olusuyor. Biz sadece Python, JavaScript ve C kismini cekiyoruz - kapsam
-daraltmasi = ayni hesaplama butcesiyle daha iyi sonuc (once konustugumuz
-"genel LLM degil, kod LLM" prensibi).
-
-Cikti format, mevcut prepare_data.py ile birebir uyumlu: data/raw_*.jsonl
+Kod-LLM v3 - Veri cekme scripti (bigcode/the-stack-smol, HF token ile).
 """
 import json
 import os
 from datasets import load_dataset
 
 OUT_DIR = "data"
-# codeparrot/github-code-clean dil isimlerini boyle bekliyor (buyuk harfle basliyor)
-LANGUAGES = ["Python", "JavaScript", "C"]
-SAMPLES_PER_LANGUAGE = 8000  # dil basina cekilecek dosya sayisi (ayarlanabilir)
-MIN_CHARS = 50               # cok kisa/anlamsiz dosyalari ele
-MAX_CHARS = 8000             # cok uzun dosyalari kirp (max_seq_len ile uyumlu kalsin)
+LANGUAGES = ["python", "javascript", "c"]
+SAMPLES_PER_LANGUAGE = 8000
+MIN_CHARS = 50
+MAX_CHARS = 8000
 
 
 def clean_and_save(lang, samples_target):
     print(f"\n--- {lang} indiriliyor (hedef: {samples_target} ornek) ---")
 
-    # streaming=True: tum veri setini diske indirmeden, ihtiyac kadar akar
     ds = load_dataset(
-        "codeparrot/github-code-clean",
-        streaming=True,
+        "bigcode/the-stack-smol",
+        data_dir=f"data/{lang}",
         split="train",
-        languages=[lang],
+        streaming=True,
     )
 
-    out_path = f"{OUT_DIR}/raw_stack_{lang.lower()}.jsonl"
+    out_path = f"{OUT_DIR}/raw_stack_{lang}.jsonl"
     written = 0
     skipped = 0
 
@@ -42,7 +30,7 @@ def clean_and_save(lang, samples_target):
         for sample in ds:
             if written >= samples_target:
                 break
-            content = sample.get("code", "").strip()
+            content = sample.get("content", "").strip()
 
             if len(content) < MIN_CHARS:
                 skipped += 1
@@ -69,8 +57,6 @@ def main():
     print(f"\n{'='*50}")
     print(f"TOPLAM YENI ORNEK: {total}")
     print(f"{'='*50}")
-    print("\nNot: Eski verileriniz (raw_1.jsonl, raw_2.jsonl) data/ klasorunde")
-    print("hala duruyor - prepare_data.py hepsini otomatik birlestirecek.")
 
 
 if __name__ == "__main__":
