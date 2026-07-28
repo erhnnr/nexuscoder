@@ -13,7 +13,9 @@ from tokenizers import Tokenizer, models, pre_tokenizers, trainers
 
 DATA_DIR = "data"
 OUT_PATH = "tokenizer/tokenizer_v4.json"
-VOCAB_SIZE = 16000  # ADR-0006: temiz Ingilizce kod verisi, buyutulmus vocab
+VOCAB_SIZE = 32000  # ADR-0012 (v4): 300k cesitli dosyada temel alfabe
+                     # bile 16000'i asiyordu (0 merge yapilamiyordu) -
+                     # buyutuldu ki gercek alt-kelime birlestirmesi olsun
 
 
 def load_texts():
