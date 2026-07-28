@@ -16,6 +16,7 @@ import os
 import sys
 import json
 import time
+import shutil
 import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
@@ -27,7 +28,7 @@ from models.model_v1 import KodLLM_v1
 # ============================================
 # AYARLAR - Colab'daki yol yapinize gore duzenleyin
 # ============================================
-PROJECT_DIR = "/content/nexuscoder"
+PROJECT_DIR = "/content/kod-llm"
 DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/nexus_checkpoints"  # Drive'a kaydeder
 TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v3.json"
 TRAIN_PATH = f"{PROJECT_DIR}/data/train.jsonl"
@@ -131,6 +132,12 @@ def main():
     tokenizer = Tokenizer.from_file(TOKENIZER_PATH)
     vocab_size = tokenizer.get_vocab_size()
     print(f"Tokenizer yuklendi. Vocab: {vocab_size}\n")
+
+    # ADR-0007: tokenizer'i checkpoint klasorune de kopyala - model ve
+    # tokenizer HER ZAMAN birlikte, ayni kaliciliga sahip olmali.
+    tokenizer_backup_path = f"{DRIVE_CHECKPOINT_DIR}/tokenizer_v3.json"
+    shutil.copy(TOKENIZER_PATH, tokenizer_backup_path)
+    print(f"Tokenizer Drive'a da yedeklendi: {tokenizer_backup_path}\n")
 
     train_ds = CodeDataset(TRAIN_PATH, tokenizer, MAX_SEQ_LEN)
     val_ds = CodeDataset(VAL_PATH, tokenizer, MAX_SEQ_LEN)
