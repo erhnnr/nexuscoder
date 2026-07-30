@@ -1,8 +1,5 @@
-
 """
-Kod-LLM v1 - Hizli uretim testi.
-Egitilen en iyi checkpoint'i yukler, birkac prompt ile metin uretir.
-Amac: kalite degil, pipeline'in uctan uca calistigini gormek.
+Kod-LLM v4 - Hizli uretim testi.
 """
 import os
 import sys
@@ -12,19 +9,22 @@ from tokenizers import Tokenizer
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.model_v1 import KodLLM_v1
 
-CHECKPOINT_PATH = "/content/drive/MyDrive/kod-llm-checkpoints/model_v1_best.pt"
-TOKENIZER_PATH = "/content/nexuscoder/tokenizer/tokenizer_v1.json"
+CHECKPOINT_PATH = "/content/drive/MyDrive/nexus_checkpoints/model_v4_best.pt"
+TOKENIZER_PATH = "/content/nexuscoder/tokenizer/tokenizer_v4.json"
 
 PROMPTS = [
     "def factorial(n):",
     "import numpy as np\n\ndef",
+    "function calculateTotal(",
+    "#include <stdio.h>\n\nint main(",
     "class ",
-    "# Bu fonksiyon",
+    "def is_prime(n):",
 ]
 
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Cihaz: {device}\n")
 
     tokenizer = Tokenizer.from_file(TOKENIZER_PATH)
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
