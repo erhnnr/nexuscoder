@@ -117,7 +117,7 @@ def evaluate(model, val_loader, device):
     total_loss, n_batches = 0.0, 0
     for input_ids, target_ids in val_loader:
         input_ids, target_ids = input_ids.to(device), target_ids.to(device)
-        _, loss = model(input_ids, target_ids)
+        _, loss, _ = model(input_ids, target_ids)
         total_loss += loss.item()
         n_batches += 1
     model.train()
@@ -204,7 +204,7 @@ def main():
             input_ids, target_ids = input_ids.to(device), target_ids.to(device)
 
             with torch.autocast(device_type="cuda", dtype=torch.float16):
-                _, loss = model(input_ids, target_ids)
+                _, loss, _ = model(input_ids, target_ids)
                 loss = loss / GRAD_ACCUM_STEPS
 
             scaler.scale(loss).backward()
