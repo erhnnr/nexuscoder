@@ -8,9 +8,9 @@ from datasets import load_dataset
 
 OUT_DIR = "data"
 LANGUAGES = ["python", "javascript", "c"]
-SAMPLES_PER_LANGUAGE = 100000  # ADR-0011 (v4-genisletilmis): tam the-stack, dil basina 100k hedef
+SAMPLES_PER_LANGUAGE = 100000  # ADR-0015 (v5): ayni kalabilir, the-stack limiti
 MIN_CHARS = 50
-MAX_CHARS = 8000
+MAX_CHARS = 12000  # ADR-0015 (v5): max_seq_len 768e cikti, biraz daha uzun dosya izni
 
 
 def clean_and_save(lang, samples_target):
