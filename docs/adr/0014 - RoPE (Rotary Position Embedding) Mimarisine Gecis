@@ -1,0 +1,42 @@
+# 0014 - RoPE (Rotary Position Embedding) Mimarisine Gecis
+
+**Durum:** Kabul edildi
+
+## Baglam
+
+ADR-0002'de, v1 icin bilincli olarak ogrenilen (learned) pozisyon
+embedding tercih edilmisti - RoPE'un o zamanki (kv-cache'siz)
+mimaride bir bug'a yol actigi tespit edilmisti. ADR-0013'te KV-cache
+dogru sekilde eklendi ve dogrulandi. v5 icin (buyuk veri + buyuk
+model + daha uzun baglam) artik RoPE'u KV-cache ile BIRLIKTE, dogru
+sekilde eklemenin zamani geldi.
+
+## Karar
+
+Yeni bir dosya (`models/model_v2.py`) olusturuldu - `model_v1.py`
+BOZULMADAN, ayri tutuldu (v3/v4 checkpoint'leri hala model_v1.py ile
+uyumlu kalsin diye). `model_v2.py` icerigi:
+
+1. Ogrenilen pozisyon embedding (`nn.Embedding`) TAMAMEN kaldirildi.
+2. RoPE, `precompute_rope_cache` + `apply_rope` fonksiyonlariyla
+   eklendi - sadece YENI hesaplanan query/key vektorlerine uygulaniyor
+   (cache'deki GECMIS key'lere degil - onlar zaten kendi
+   pozisyonlarina gore rotate edilmis halde duruyor).
+3. KV-cache ile pozisyon kaymasi dogru yonetiliyor: `past_len` ofseti,
+   cos/sin tablosunun dogru dilimini secmek icin kullaniliyor.
+4. Dosyanin sonuna, RoPE + KV-cache'in matematiksel tutarliligini
+   dogrulayan bir sanity check eklendi (ADR-0013'teki testin RoPE'lu
+   versiyonu).
+
+## Sonuclar
+
+- (+) Modelin uzun baglam genellemesi teorik olarak iyilesmeli
+  (RoPE'un bilinen avantaji - LLaMA, Mistral gibi modern modeller de
+  bunu kullaniyor).
+- (+) v1 mimarisi (model_v1.py) bozulmadi - v3/v4 checkpoint'leri hala
+  kullanilabilir durumda kaliyor, geriye donuk uyumluluk korundu.
+- (-) v5, model_v2.py kullandigi icin v4'ten (model_v1.py) SIFIRDAN
+  baslamak zorunda - agirliklar tasin(a)maz (farkli mimari).
+- Bu degisiklik, v5 plani (ADR-0015) ile BIRLIKTE, tek bir yeni
+  egitimde uygulanacak - ayri ayri iki kez sifirdan egitim
+  yapilmasini onlemek icin.
