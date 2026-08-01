@@ -1,0 +1,50 @@
+# 0015 - v5 Plani: RoPE + Buyutulmus Model + Daha Uzun Baglam
+
+**Durum:** Kabul edildi
+
+## Baglam
+
+v4 basariyla tamamlandi (ADR-0012, epoch 42, val_loss=1.49). KV-cache
+eklendi ve dogrulandi (ADR-0013). Kullanicinin onceligi netlesti:
+"gereksiz teknik borc yok" - yani RoPE (mimari degisikligi, sifirdan
+egitim gerektiriyor) ile veri/model buyutmeyi (zaten sifirdan egitim
+gerektiriyor) AYNI ANDA, TEK bir egitimde birlestirmek.
+
+## Karar
+
+v5 icin uc degisiklik BIRLIKTE uygulaniyor:
+
+1. **Mimari**: `model_v2.py` (RoPE + KV-cache, ADR-0014).
+2. **Model boyutu buyutuldu**: `dim` 512->640, `num_layers` 8->10,
+   `num_heads` 8->10 (~41.8M -> tahmini ~70-90M parametre).
+3. **Baglam penceresi uzatildi**: `max_seq_len` 512->768 - bu,
+   kullanicinin en bastaki hedefiyle ("daha uzun kod dosyalarini/
+   projelerini hatirlayan bir model") dogrudan iliskili. Buna uyumlu
+   olarak `fetch_dataset.py`'daki `MAX_CHARS` 8000->12000 yukseltildi
+   (dosyalarin daha az kirpilmasi icin).
+4. **Vocab buyutuldu**: 32.000 -> 40.000 (buyuyen model kapasitesine
+   oranli, tokenizer_v5.json olarak yeniden egitilecek).
+5. **Resume mantigi saglamlastirildi** (ADR-0011'deki acik backlog
+   maddesi KAPATILDI): script artik once LATEST, o da yoksa BEST
+   checkpoint'i dener - boylece `best_val_loss` hicbir zaman
+   yanlislikla sifirlanip var olan bir best dosyasinin uzerine
+   kontrolsuzce yazilmiyor.
+
+Veri miktari (`SAMPLES_PER_LANGUAGE=100000`, dil basina) v4 ile AYNI
+birakildi - `bigcode/the-stack` bu seviyede zaten dogal bir sinira
+(mevcut dosya sayisi) ulasmisti, ekstra buyutme bu asamada
+onceliklendirilmedi (mimari + baglam uzunlugu onceliklendirildi).
+
+## Sonuclar
+
+- (+) Tek bir egitim kosusunda hem mimari hem olcek iyilestirmesi
+  elde ediliyor - iki ayri "sifirdan baslama" maliyeti onlendi.
+- (+) Daha uzun baglam penceresi, kullanicinin orijinal hedefine
+  (uzun kod/proje takibi) bir adim daha yaklastiriyor.
+- (-) Daha buyuk model + daha uzun sekans (768 vs 512), epoch basina
+  sureyi muhtemelen artiracak - gercek sure, ilk birkac epoch
+  calistirildiktan sonra olculecek (v4'te oldugu gibi tahmin yerine
+  olcum tercih ediliyor).
+- Checkpoint/tokenizer adlandirmasi v5'e tasindi
+  (`tokenizer_v5.json`, `model_v5_*`) - v4 ile hicbir isim
+  cakismasi olmayacak sekilde.
