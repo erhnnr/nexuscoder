@@ -1,7 +1,7 @@
 """
 Kod-LLM v3 - Ana egitim scripti (Colab icin).
 
-v4 ADR-0011 (veri+model buyutuldu), eski v3 ADR-0006: tokenizer_v4.json (16k vocab, sadece Ingilizce/kod verisi),
+v5 ADR-0014/0015: RoPE mimarisi (model_v2.py), tokenizer_v5.json (40k vocab),
 checkpoint klasoru nexus_checkpoints olarak guncellendi.
 v3 ADR-0007: tokenizer, checkpoint ile AYNI Drive klasorune kopyalanir.
 v3 ADR-0008: RESUME destegi eklendi - onceki en iyi checkpoint varsa
@@ -24,19 +24,19 @@ from torch.utils.data import Dataset, DataLoader
 from tokenizers import Tokenizer
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models.model_v1 import KodLLM_v1
+from models.model_v2 import KodLLM_v2
 
 # ============================================
 # AYARLAR - Colab'daki yol yapinize gore duzenleyin
 # ============================================
 PROJECT_DIR = "/content/nexuscoder"
 DRIVE_CHECKPOINT_DIR = "/content/drive/MyDrive/nexus_checkpoints"
-TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v4.json"
+TOKENIZER_PATH = f"{PROJECT_DIR}/tokenizer/tokenizer_v5.json"
 TRAIN_PATH = f"{PROJECT_DIR}/data/train.jsonl"
 VAL_PATH = f"{PROJECT_DIR}/data/val.jsonl"
-RESUME_CHECKPOINT_PATH = f"{DRIVE_CHECKPOINT_DIR}/model_v4_latest.pt"  # ADR-0009: resume icin BEST degil LATEST kullanilir
+RESUME_CHECKPOINT_PATH = f"{DRIVE_CHECKPOINT_DIR}/model_v5_latest.pt"  # ADR-0009: resume icin BEST degil LATEST kullanilir
 
-MAX_SEQ_LEN = 512
+MAX_SEQ_LEN = 768  # ADR-0015 (v5): daha uzun baglam penceresi
 BATCH_SIZE = 8
 GRAD_ACCUM_STEPS = 4
 NUM_EPOCHS = 5              # Bu OTURUMDA kac epoch kosulacak (kisa, hizli test)
@@ -47,9 +47,9 @@ EVAL_EVERY_N_BATCHES = 500
 CHECKPOINT_EVERY_N_EPOCHS = 1
 
 MODEL_CONFIG = dict(
-    dim=512,
-    num_layers=8,
-    num_heads=8,
+    dim=640,
+    num_layers=10,
+    num_heads=10,
     max_seq_len=MAX_SEQ_LEN,
     dropout=0.1,
 )
@@ -134,7 +134,7 @@ def main():
     print(f"Tokenizer yuklendi. Vocab: {vocab_size}\n")
 
     # ADR-0007: tokenizer'i checkpoint klasorune de kopyala.
-    tokenizer_backup_path = f"{DRIVE_CHECKPOINT_DIR}/tokenizer_v4.json"
+    tokenizer_backup_path = f"{DRIVE_CHECKPOINT_DIR}/tokenizer_v5.json"
     shutil.copy(TOKENIZER_PATH, tokenizer_backup_path)
     print(f"Tokenizer Drive'a da yedeklendi: {tokenizer_backup_path}\n")
 
@@ -150,7 +150,7 @@ def main():
         collate_fn=val_ds.collate_fn, num_workers=2,
     )
 
-    model = KodLLM_v1(vocab_size=vocab_size, **MODEL_CONFIG).to(device)
+    model = KodLLM_v2(vocab_size=vocab_size, **MODEL_CONFIG).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     scaler = torch.amp.GradScaler('cuda')
 
@@ -161,29 +161,34 @@ def main():
     start_epoch = 0
     best_val_loss = float("inf")
 
-    if os.path.exists(RESUME_CHECKPOINT_PATH):
-        ckpt = torch.load(RESUME_CHECKPOINT_PATH, map_location=device)
+    # ADR-0011/0015: onceki bug'in kalici duzeltmesi - once LATEST, o yoksa
+    # BEST denenir, ikisi de yoksa (veya uyumsuzsa) SIFIRDAN baslanir.
+    # Boylece best_val_loss hicbir zaman yanlislikla "infinity"ye
+    # sifirlanip var olan bir best dosyasinin uzerine kontrolsuzce
+    # yazilmaz.
+    resume_candidates = [RESUME_CHECKPOINT_PATH, f"{DRIVE_CHECKPOINT_DIR}/model_v5_best.pt"]
+    loaded = False
+    for path in resume_candidates:
+        if not os.path.exists(path):
+            continue
+        ckpt = torch.load(path, map_location=device)
         if ckpt.get("vocab_size") == vocab_size and ckpt.get("model_config") == MODEL_CONFIG:
             model.load_state_dict(ckpt["model_state_dict"])
             optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-            # ADR-0009: onceki oturumun cosine schedule'i LR'yi ~0'a
-            # dusurmus olabilir. Optimizer'in tasidigi LR'ye guvenmek
-            # yerine, bu YENI oturum icin LR'yi bilincli olarak
-            # taban degere (LR sabiti) SIFIRLIYORUZ - yoksa yeni
-            # scheduler zaten-sifir bir degerden baslar ve o oturumda
-            # hicbir gercek ogrenme olmaz (bkz. ADR-0009).
             for param_group in optimizer.param_groups:
                 param_group["lr"] = LR
             start_epoch = ckpt["epoch"]
             best_val_loss = ckpt["val_loss"]
-            print(f"DEVAM EDILIYOR: onceki checkpoint yuklendi "
-                  f"(epoch {start_epoch}, val_loss={best_val_loss:.4f})")
+            print(f"DEVAM EDILIYOR ({path.split('/')[-1]}): "
+                  f"epoch {start_epoch}, val_loss={best_val_loss:.4f}")
             print(f"LR bu oturum icin {LR} degerine sifirlandi (ADR-0009)\n")
+            loaded = True
+            break
         else:
-            print("Uyari: bulunan checkpoint mevcut tokenizer/model_config ile "
-                  "UYUSMUYOR. SIFIRDAN baslaniyor (guvenlik onlemi).\n")
-    else:
-        print("Onceki checkpoint bulunamadi. SIFIRDAN baslaniyor.\n")
+            print(f"Uyari: {path.split('/')[-1]} mevcut tokenizer/model_config ile "
+                  "UYUSMUYOR, atlaniyor.\n")
+    if not loaded:
+        print("Uygun onceki checkpoint bulunamadi. SIFIRDAN baslaniyor.\n")
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model parametre sayisi: {total_params:,} ({total_params/1e6:.1f}M)\n")
@@ -252,11 +257,11 @@ def main():
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v4_best.pt")
+            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v5_best.pt")
             print(f"  Yeni en iyi model Drive'a kaydedildi (val_loss={val_loss:.4f})\n")
 
         if (local_epoch + 1) % CHECKPOINT_EVERY_N_EPOCHS == 0:
-            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v4_epoch_{epoch}.pt")
+            torch.save(checkpoint_dict, f"{DRIVE_CHECKPOINT_DIR}/model_v5_epoch_{epoch}.pt")
 
         scheduler.step()
 
